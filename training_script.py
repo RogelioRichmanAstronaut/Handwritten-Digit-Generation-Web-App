@@ -7,41 +7,41 @@ from torch.utils.data import DataLoader
 import numpy as np
 from collections import defaultdict
 
-# Importa la definición del modelo
+# Import the model definition
 from model import VAE
 
-# --- Configuración ---
-# Se recomienda ejecutar este script en Google Colab con una GPU T4
-# Para habilitarla: Entorno de ejecución -> Cambiar tipo de entorno de ejecución -> T4 GPU
+# --- Configuration ---
+# It is recommended to run this script in Google Colab with a T4 GPU
+# To enable it: Runtime -> Change runtime type -> T4 GPU
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {DEVICE}")
 
-# Hiperparámetros
+# Hyperparameters
 EPOCHS = 20
 BATCH_SIZE = 128
 LEARNING_RATE = 1e-3
-LATENT_DIM = 20 # Dimensión del espacio latente
+LATENT_DIM = 20 # Latent space dimension
 
-# --- Carga de Datos (MNIST) ---
+# --- Data Loading (MNIST) ---
 transform = transforms.ToTensor()
 train_dataset = datasets.MNIST(root='./data', train=True, transform=transform, download=True)
 train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 
-# --- Inicialización del Modelo y Optimizador ---
+# --- Model and Optimizer Initialization ---
 model = VAE(latent_dim=LATENT_DIM).to(DEVICE)
 optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-# --- Función de Pérdida VAE ---
+# --- VAE Loss Function ---
 def loss_function(recon_x, x, mu, logvar):
-    # Pérdida de reconstrucción (Binary Cross Entropy)
+    # Reconstruction loss (Binary Cross Entropy)
     BCE = F.binary_cross_entropy(recon_x, x.view(-1, 784), reduction='sum')
-    # Divergencia KL: mide qué tan similar es el espacio latente a una gaussiana estándar
+    # KL divergence: measures how similar the latent space is to a standard Gaussian
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return BCE + KLD
 
-# --- Bucle de Entrenamiento ---
-print("Iniciando entrenamiento del VAE...")
+# --- Training Loop ---
+print("Starting VAE training...")
 model.train()
 for epoch in range(EPOCHS):
     train_loss = 0
@@ -59,19 +59,19 @@ for epoch in range(EPOCHS):
     avg_loss = train_loss / len(train_loader.dataset)
     print(f'====> Epoch: {epoch+1} Average loss: {avg_loss:.4f}')
 
-print("Entrenamiento finalizado.")
+print("Training finished.")
 
-# --- Guardar el Modelo Entrenado ---
+# --- Save Trained Model ---
 MODEL_PATH = 'vae_mnist.pth'
 torch.save(model.state_dict(), MODEL_PATH)
-print(f"Modelo guardado en: {MODEL_PATH}")
+print(f"Model saved to: {MODEL_PATH}")
 
 
-# --- Calcular y Guardar Vectores Latentes Promedio ---
-print("Calculando vectores latentes promedio por dígito...")
+# --- Calculate and Save Mean Latent Vectors ---
+print("Calculating mean latent vectors per digit...")
 model.eval()
 
-# Usar un dataloader sin shuffle para procesar todo el dataset en orden
+# Use a dataloader without shuffle to process the entire dataset in order
 full_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
 latent_vectors = defaultdict(list)
@@ -89,8 +89,8 @@ for digit in range(10):
     mean_vector = np.mean(vectors, axis=0)
     mean_latent_vectors[digit] = torch.from_numpy(mean_vector)
 
-# Guardar los vectores promedio
+# Save the mean vectors
 VECTORS_PATH = 'mean_latent_vectors.pth'
 torch.save(mean_latent_vectors, VECTORS_PATH)
-print(f"Vectores latentes promedio guardados en: {VECTORS_PATH}")
-print("¡Proceso completado!")
+print(f"Mean latent vectors saved to: {VECTORS_PATH}")
+print("Process completed!")
